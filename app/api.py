@@ -1,16 +1,21 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, render_template, request, redirect, url_for
 from ast_builder import create_ast        # Use absolute import
-from rule_engine import evaluate_ast, Node
+from rule_engine import Node, evaluate_ast
 from db.database import save_rule             # Absolute import from db
 
 app = Flask(__name__)
 
 @app.route('/create_rule', methods=['POST'])
 def create_rule():
-    rule_string = request.json['rule']
-    ast = create_ast(rule_string)  # Generate the AST
-    save_rule(rule_string, ast)    # Save the rule in the database
-    return jsonify({"ast": ast.to_dict()})  # Serialize it to a dictionary
+    try:
+        data = request.get_json()
+        rule_string = data['rule']
+        ast = create_ast(rule_string)  # Generate the AST
+        save_rule(rule_string, ast)    # Save the rule in the database
+        return jsonify({"ast": ast.to_dict()})  # Return the AST
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400  # Return error message as JSON
+
 
 def dict_to_node(ast_dict):
     """Convert dictionary representation of AST to Node objects."""
@@ -34,6 +39,18 @@ def evaluate():
     # Evaluate the AST
     result = evaluate_ast(ast, context)
     return jsonify({"result": result})
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+@app.route('/result')
+def result():
+    rule_string = request.args.get('rule_string')
+    ast = create_ast(rule_string)
+    # Assuming you have a context for evaluation, you can define it here
+    context = {}  # Define your evaluation context
+    evaluation_result = evaluate_rule(ast, context)
+    return render_template('result.html', rule_string=rule_string, result=evaluation_result)
 
 if __name__ == '__main__':
     app.run(debug=True)

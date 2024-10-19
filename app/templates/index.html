@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rule Engine</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        textarea { width: 100%; height: 100px; }
+        #result { margin-top: 20px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Rule Engine</h1>
+    <form id="rule-form">
+        <label for="rule">Enter a rule string:</label>
+        <textarea id="rule" name="rule" required></textarea>
+        <button type="submit">Create Rule</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        $(document).ready(function() {
+            $('#rule-form').on('submit', function(e) {
+                e.preventDefault();  // Prevent the form from submitting normally
+
+                const ruleString = $('#rule').val();  // Get the rule string
+
+                // Send the rule string to the server
+                $.ajax({
+                    url: '/create_rule',
+                    type: 'POST',
+                    contentType: 'application/json',  // Set content type
+                    data: JSON.stringify({ rule: ruleString }),
+                    success: function(response) {
+                        // Display the AST returned from the server
+                        $('#result').html('<h3>AST:</h3><pre>' + JSON.stringify(response.ast, null, 2) + '</pre>');
+                    },
+                    error: function(xhr) {
+                        // Display any error message returned from the server
+                        $('#result').html('<div class="error">Error: ' + xhr.responseJSON.error + '</div>');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
