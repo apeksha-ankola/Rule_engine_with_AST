@@ -1,16 +1,16 @@
 from flask import Flask, request, jsonify
-from ast_builder import create_ast
+from ast_builder import create_ast        # Use absolute import
 from rule_engine import evaluate_ast, Node
+from db.database import save_rule             # Absolute import from db
 
 app = Flask(__name__)
-
 
 @app.route('/create_rule', methods=['POST'])
 def create_rule():
     rule_string = request.json['rule']
     ast = create_ast(rule_string)  # Generate the AST
+    save_rule(rule_string, ast)    # Save the rule in the database
     return jsonify({"ast": ast.to_dict()})  # Serialize it to a dictionary
-
 
 def dict_to_node(ast_dict):
     """Convert dictionary representation of AST to Node objects."""
@@ -21,7 +21,6 @@ def dict_to_node(ast_dict):
         right_node = dict_to_node(ast_dict['right'])
         return Node(node_type='operator', value=ast_dict['value'], left=left_node, right=right_node)
     return None
-
 
 @app.route('/evaluate_rule', methods=['POST'])
 def evaluate():
@@ -35,7 +34,6 @@ def evaluate():
     # Evaluate the AST
     result = evaluate_ast(ast, context)
     return jsonify({"result": result})
-
 
 if __name__ == '__main__':
     app.run(debug=True)

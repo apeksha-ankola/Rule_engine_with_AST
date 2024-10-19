@@ -15,19 +15,30 @@ class Node:
             result["right"] = self.right.to_dict()
         return result
 
+
 def create_ast(rule_string):
-    tokens = rule_string.replace("(", " ( ").replace(")", " ) ").split()
+    """
+    Converts a rule string into an Abstract Syntax Tree (AST).
+    Raises a ValueError for invalid tokens.
+    """
+    # Clean up and tokenize the rule string
+    rule_string = rule_string.strip()  # Remove leading/trailing spaces
+    tokens = rule_string.replace("(", " ( ").replace(")", " ) ").split()  # Handle parentheses
     stack = []
     current = None
+    valid_operators = ["AND", "OR", ">", "<", "=", "!="]
 
     for token in tokens:
+        # Validate each token
+        if token not in valid_operators and not token.replace("'", "").isalnum() and token not in ["(", ")"]:
+            raise ValueError(f"Invalid token in rule: {token}")
+
         if token == '(':
             stack.append(current)
             current = None
         elif token == ')':
             if stack:
                 if current:
-                    # If there's a current node, pop the last operator
                     last_operator = stack.pop()
                     if last_operator:
                         last_operator.right = current
@@ -51,17 +62,38 @@ def create_ast(rule_string):
                 if current.type == "operator" and current.right is None:
                     current.right = operand_node
                 else:
-                    # If current is an operand, we can create a new operator node
-                    # to maintain the tree structure
+                    # If current is an operand, create a new operator node
                     new_operator = Node("operator", current.value)
                     new_operator.left = current
                     new_operator.right = operand_node
                     current = new_operator
 
-    # Check if current is None before returning
-    if current is None:
-        print("Error: No valid AST could be created from the rule string.")
+    # Check if there is any unresolved operator in the stack
+    while stack:
+        last_operator = stack.pop()
+        if last_operator:
+            last_operator.right = current
+            current = last_operator
+
+    # Return the final AST
     return current
+
+
+# Function to combine multiple rules into one AST
+def combine_rules(rules, operator="AND"):
+    """
+    Combines multiple rules into a single AST using the provided operator (AND/OR).
+    """
+    combined_ast = None
+    for rule in rules:
+        ast = create_ast(rule)  # Create AST for each rule
+        if combined_ast is None:
+            combined_ast = ast  # Initialize AST with the first rule
+        else:
+            # Combine ASTs using the provided operator
+            combined_ast = Node(node_type="operator", value=operator, left=combined_ast, right=ast)
+    return combined_ast
+
 
 # Example Usage
 rule_string = "(age > 30 AND department = 'Sales')"

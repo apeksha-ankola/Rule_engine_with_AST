@@ -15,6 +15,7 @@ class Node:
             result["right"] = self.right.to_dict()
         return result
 
+
 def create_ast(rule_string):
     tokens = rule_string.replace("(", " ( ").replace(")", " ) ").split()
     stack = []
@@ -46,12 +47,16 @@ def create_ast(rule_string):
         print("Error: No valid AST could be created from the rule string.")
     return current
 
+
+valid_attributes = {"age", "department", "salary"}
+
 def evaluate_ast(node, context):
     if node is None:
         return None  # Handle the case where node is None
 
     # Check the type of node
     if node.type == "operand":
+        # Handle numeric and string operands
         if node.value.isnumeric():
             return int(node.value)
         elif node.value.startswith("'") and node.value.endswith("'"):
@@ -59,24 +64,25 @@ def evaluate_ast(node, context):
         else:
             return context.get(node.value, None)
 
-    elif node.type == "operator":
-        left_value = evaluate_ast(node.left, context)
-        right_value = evaluate_ast(node.right, context)
+    # Handle operator nodes (e.g., AND, OR, >, <)
+    left_value = evaluate_ast(node.left, context)
+    right_value = evaluate_ast(node.right, context)
 
-        if node.value == ">":
-            return left_value > right_value
-        elif node.value == "<":
-            return left_value < right_value
-        elif node.value == "=":
-            return left_value == right_value
-        elif node.value == "!=":
-            return left_value != right_value
-        elif node.value == "AND":
-            return left_value and right_value
-        elif node.value == "OR":
-            return left_value or right_value
+    if node.value == ">":
+        return left_value > right_value
+    elif node.value == "<":
+        return left_value < right_value
+    elif node.value == "=":
+        return left_value == right_value
+    elif node.value == "!=":
+        return left_value != right_value
+    elif node.value == "AND":
+        return left_value and right_value
+    elif node.value == "OR":
+        return left_value or right_value
 
     return None
+
 
 # Main Code Execution
 if __name__ == "__main__":
