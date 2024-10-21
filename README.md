@@ -39,13 +39,11 @@ Before you begin, ensure you have met the following requirements:
    python -m venv venv
    source venv/bin/activate
    # On Windows use `venv\Scripts\activate`
-   
    ```
   
 4. Install the required packages:
    ```
    pip install -r requirements.txt
-   
    ```
 
 6. Initialize the SQLite database:
@@ -54,7 +52,7 @@ Before you begin, ensure you have met the following requirements:
    ```
 7. Run the application
   ```
-  python app.py
+  python app/api.py
   ```
 The API will be available at http://127.0.0.1:5000.
 
