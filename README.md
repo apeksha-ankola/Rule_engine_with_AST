@@ -73,18 +73,43 @@ Request Body:
 
 ```
 {
-    "rule_id": 1,
+    "ast": {
+        "type": "operator",
+        "value": "AND",
+        "left": {
+            "type": "operator",
+            "value": ">",
+            "left": {
+                "type": "operand",
+                "value": "age"
+            },
+            "right": {
+                "type": "operand",
+                "value": "30"
+            }
+        },
+        "right": {
+            "type": "operator",
+            "value": "=",
+            "left": {
+                "type": "operand",
+                "value": "department"
+            },
+            "right": {
+                "type": "operand",
+                "value": "'Sales'"
+            }
+        }
+    },
     "context": {
-        "age": 20,
-        "income": 40000
+        "age": 35,
+        "department": "Sales"
     }
 }
+
 ```
 3. Get All Rules
 Endpoint: GET /rules
-
-5. Delete a Rule
-Endpoint: DELETE /delete_rule/{rule_id}
 
 
 ## Testing
