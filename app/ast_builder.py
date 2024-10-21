@@ -1,3 +1,8 @@
+class ASTError(Exception):
+    """Custom exception for AST errors."""
+    pass
+
+
 class Node:
     def __init__(self, node_type, value=None, left=None, right=None):
         self.type = node_type  # "operator" or "operand"
@@ -19,23 +24,26 @@ class Node:
 def create_ast(rule_string):
     """
     Converts a rule string into an Abstract Syntax Tree (AST).
-    Raises a ValueError for invalid tokens.
+    Raises an ASTError for invalid tokens or syntactic errors.
     """
-    # Clean up and tokenize the rule string
     rule_string = rule_string.strip()  # Remove leading/trailing spaces
     tokens = rule_string.replace("(", " ( ").replace(")", " ) ").split()  # Handle parentheses
     stack = []
     current = None
     valid_operators = ["AND", "OR", ">", "<", "=", "!="]
 
+    # Track the last processed token
+    last_token = None
+
     for token in tokens:
         # Validate each token
         if token not in valid_operators and not token.replace("'", "").isalnum() and token not in ["(", ")"]:
-            raise ValueError(f"Invalid token in rule: {token}")
+            raise ASTError(f"Invalid token in rule: {token}")
 
         if token == '(':
             stack.append(current)
             current = None
+            last_token = token
         elif token == ')':
             if stack:
                 if current:
@@ -43,62 +51,79 @@ def create_ast(rule_string):
                     if last_operator:
                         last_operator.right = current
                         current = last_operator
+                else:
+                    raise ASTError("Unexpected closing parenthesis: opening without a corresponding closing.")
+            else:
+                raise ASTError("Unexpected closing parenthesis: no matching opening parenthesis.")
+            last_token = token
         elif token in ["AND", "OR"]:
+            if last_token in valid_operators + ["(", None]:
+                raise ASTError(f"Unexpected operator: {token} following {last_token}.")
             node = Node("operator", token)
             if current:  # If there's already a current node, set it as the left child
                 node.left = current
             current = node  # Update current to the new operator node
+            last_token = token
         elif token in [">", "<", "=", "!="]:
+            if last_token in valid_operators + ["(", None]:
+                raise ASTError(f"Unexpected comparison operator: {token} following {last_token}.")
             operator_node = Node("operator", token)
             if current:  # If there's already a current operand, set it as the left child
                 operator_node.left = current
             current = operator_node  # Update current to the new operator node
+            last_token = token
         else:
-            operand_node = Node("operand", token)
-            if current is None:  # If current is None, this is the first operand
-                current = operand_node
-            else:
-                # If current is an operator, set the operand as the right child
-                if current.type == "operator" and current.right is None:
-                    current.right = operand_node
+            # This is an operand
+            if last_token in valid_operators + ["(", None]:
+                operand_node = Node("operand", token)
+                if current is None:  # If current is None, this is the first operand
+                    current = operand_node
                 else:
-                    # If current is an operand, create a new operator node
-                    new_operator = Node("operator", current.value)
-                    new_operator.left = current
-                    new_operator.right = operand_node
-                    current = new_operator
+                    # If current is an operator, set the operand as the right child
+                    if current.type == "operator":
+                        current.right = operand_node
+                    else:
+                        raise ASTError(f"Unexpected operand: {token} following {last_token}.")
+            else:
+                raise ASTError(f"Unexpected operand: {token} following {last_token}.")
+            last_token = token
 
-    # Check if there is any unresolved operator in the stack
-    while stack:
-        last_operator = stack.pop()
-        if last_operator:
-            last_operator.right = current
-            current = last_operator
+    # If we reach here, we need to check for completeness of the current tree
+    if current is None:
+        raise ASTError("Empty rule: no valid AST generated.")
 
-    # Return the final AST
+    # Ensure no unmatched opening parentheses
+    if stack:
+        raise ASTError("Unmatched opening parentheses in rule.")
+
+    # Check if the last token processed is an operator or an opening parenthesis
+    if last_token in ["AND", "OR", ">", "<", "=", "!="]:
+        raise ASTError(f"Unexpected end of rule: incomplete expression ends with operator '{last_token}'.")
+
     return current
 
 
-# Function to combine multiple rules into one AST
-def combine_rules(rules, operator="AND"):
-    """
-    Combines multiple rules into a single AST using the provided operator (AND/OR).
-    """
-    combined_ast = None
-    for rule in rules:
-        ast = create_ast(rule)  # Create AST for each rule
-        if combined_ast is None:
-            combined_ast = ast  # Initialize AST with the first rule
-        else:
-            # Combine ASTs using the provided operator
-            combined_ast = Node(node_type="operator", value=operator, left=combined_ast, right=ast)
-    return combined_ast
+if __name__ == "__main__":
+    # Test valid rule
+    rule_string = "(age > 30 AND department = 'Sales')"
+    try:
+        ast = create_ast(rule_string)
+        print("AST for single rule:")
+        print(ast.to_dict())
+    except ASTError as e:
+        print(f"Error: {str(e)}")
 
+    # Test invalid rules
+    invalid_rules = [
+        "(age > 30 AND department = 'Sales'",  # Missing closing parenthesis
+        "age > 30 AND = 'Sales'",  # Invalid operator
+        "(age > 30 AND)",  # Incomplete expression
+        "(age ( 30 AND department = 'Sales')"  # Invalid token
+    ]
 
-# Example Usage
-rule_string = "(age > 30 AND department = 'Sales')"
-ast = create_ast(rule_string)
-if ast:
-    print(ast.to_dict())
-else:
-    print("AST is None.")
+    for rule in invalid_rules:
+        try:
+            print(f"Testing invalid rule: {rule}")
+            create_ast(rule)  # This should raise an error
+        except ASTError as e:
+            print(f"Error for rule '{rule}': {str(e)}")

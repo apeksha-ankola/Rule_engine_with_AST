@@ -22,12 +22,16 @@ def create_ast(rule_string):
     current = None
 
     for token in tokens:
+        print("Token:", token)  # Debug: print each token
         if token == '(':
             stack.append(current)
             current = None
         elif token == ')':
             if len(stack) > 0:
-                current = stack.pop()
+                previous = stack.pop()
+                if previous is not None:
+                    previous.right = current
+                    current = previous
         elif token in ["AND", "OR"]:
             node = Node("operator", token)
             node.left = current
@@ -41,7 +45,16 @@ def create_ast(rule_string):
             if current is None:
                 current = operand_node
             else:
-                current.right = operand_node
+                # Attach the operand node correctly
+                if current.right is None:
+                    current.right = operand_node
+                else:
+                    print(f"Warning: {current.value} already has a right child. Attaching to the next available node.")  # Debug attachment
+                    while current.right is not None:
+                        if len(stack) == 0:
+                            break
+                        current = stack.pop()
+                    current.right = operand_node
 
     if current is None:
         print("Error: No valid AST could be created from the rule string.")
@@ -49,6 +62,7 @@ def create_ast(rule_string):
 
 
 valid_attributes = {"age", "department", "salary"}
+
 
 def evaluate_ast(node, context):
     if node is None:
@@ -84,17 +98,40 @@ def evaluate_ast(node, context):
     return None
 
 
+def combine_rules(rules):
+    combined_ast = None
+    for rule in rules:
+        ast = create_ast(rule)  # Create AST from rule string
+        if ast is None:
+            print(f"Skipping invalid rule: {rule}")
+            continue  # Skip invalid rules
+        if combined_ast is None:
+            combined_ast = ast
+        else:
+            # Combine the existing AST with the new one
+            combined_node = Node("operator", "AND")  # You can change this to OR if needed
+            combined_node.left = combined_ast
+            combined_node.right = ast
+            combined_ast = combined_node
+    return combined_ast
+
+
 # Main Code Execution
 if __name__ == "__main__":
-    rule_string = "(age > 30 AND department = 'Sales')"
-    ast = create_ast(rule_string)  # Create AST from rule string
+    rules = [
+        "(age > 30 AND department = 'Sales')",
+        "(salary < 50000 OR age < 25)"
+    ]
+
+    combined_ast = combine_rules(rules)  # Combine ASTs from multiple rules
 
     # Define the context for evaluation
     context = {
         "age": 35,
-        "department": "Sales"
+        "department": "Sales",
+        "salary": 40000
     }
 
-    # Evaluate the AST
-    result = evaluate_ast(ast, context)
-    print("Result of AST evaluation:", result)
+    # Evaluate the combined AST
+    result = evaluate_ast(combined_ast, context)
+    print("Result of combined AST evaluation:", result)
