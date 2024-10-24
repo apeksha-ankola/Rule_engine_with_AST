@@ -56,6 +56,8 @@ Before you begin, ensure you have met the following requirements:
   ```
 The API will be available at http://127.0.0.1:5000.
 
+Frontend Installation Steps: Open index.html in your preferred web browser.
+
 
 ## API Endpoints
 1. Create a Rule
